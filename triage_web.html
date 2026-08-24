@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Agente de Triagem — Lógica Proposicional</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0f1720;
+    --panel:#161f29;
+    --panel-2:#1c2833;
+    --border:#28374a;
+    --border-soft:#1f2c3a;
+    --text:#e8eef4;
+    --text-dim:#8ea0b3;
+    --text-faint:#5b6c7d;
+    --accent:#48d9c4;
+    --accent-dim:rgba(72,217,196,0.12);
+    --red:#e15a5f;
+    --orange:#ef9a52;
+    --yellow:#e8c257;
+    --green:#6fca82;
+    --blue:#5aa3e0;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--text);
+    font-family:'Inter',sans-serif;
+    padding:32px 20px 60px;
+  }
+  .wrap{max-width:920px;margin:0 auto;}
+
+  .eyebrow{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:12px;
+    letter-spacing:.12em;
+    text-transform:uppercase;
+    color:var(--accent);
+    margin:0 0 6px;
+  }
+  h1{
+    font-family:'Space Grotesk',sans-serif;
+    font-weight:700;
+    font-size:28px;
+    margin:0 0 28px;
+    letter-spacing:-0.01em;
+  }
+
+  .tabs{display:flex;gap:8px;margin-bottom:24px;border-bottom:1px solid var(--border-soft);}
+  .tab{
+    font-family:'Space Grotesk',sans-serif;
+    font-weight:500;
+    font-size:14px;
+    background:none;
+    border:none;
+    color:var(--text-dim);
+    padding:10px 4px;
+    margin-right:20px;
+    cursor:pointer;
+    border-bottom:2px solid transparent;
+    transition:color .15s ease, border-color .15s ease;
+  }
+  .tab.active{color:var(--text);border-color:var(--accent);}
+  .tab:hover{color:var(--text);}
+
+  .view{display:none;}
+  .view.active{display:block;}
+
+  /* ---- Triagem view ---- */
+  .grid{display:grid;grid-template-columns:260px 1fr;gap:24px;}
+  @media (max-width:720px){.grid{grid-template-columns:1fr;}}
+
+  .panel{
+    background:var(--panel);
+    border:1px solid var(--border-soft);
+    border-radius:10px;
+    padding:18px;
+  }
+  .panel-title{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:11px;
+    letter-spacing:.1em;
+    text-transform:uppercase;
+    color:var(--text-faint);
+    margin:0 0 14px;
+  }
+
+  .prop{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    padding:10px 8px;
+    border-radius:8px;
+    cursor:pointer;
+    user-select:none;
+    transition:background .15s ease;
+  }
+  .prop:hover{background:var(--panel-2);}
+  .prop-letter{
+    font-family:'IBM Plex Mono',monospace;
+    font-weight:500;
+    font-size:14px;
+    width:24px;
+    height:24px;
+    border-radius:6px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    background:var(--panel-2);
+    color:var(--text-dim);
+    border:1px solid var(--border);
+    transition:all .15s ease;
+    flex-shrink:0;
+  }
+  .prop.on .prop-letter{
+    background:var(--accent-dim);
+    color:var(--accent);
+    border-color:var(--accent);
+  }
+  .prop-label{font-size:13px;color:var(--text-dim);flex:1;transition:color .15s ease;}
+  .prop.on .prop-label{color:var(--text);}
+  .switch{
+    width:32px;height:18px;border-radius:9px;
+    background:var(--panel-2);
+    border:1px solid var(--border);
+    position:relative;
+    flex-shrink:0;
+    transition:background .15s ease, border-color .15s ease;
+  }
+  .switch::after{
+    content:'';
+    position:absolute;top:2px;left:2px;
+    width:12px;height:12px;border-radius:50%;
+    background:var(--text-faint);
+    transition:transform .15s ease, background .15s ease;
+  }
+  .prop.on .switch{background:var(--accent-dim);border-color:var(--accent);}
+  .prop.on .switch::after{transform:translateX(14px);background:var(--accent);}
+
+  .rules{display:flex;flex-direction:column;gap:10px;}
+  .rule{
+    background:var(--panel-2);
+    border:1px solid var(--border-soft);
+    border-radius:8px;
+    padding:12px 14px;
+    opacity:.5;
+    transition:opacity .2s ease, border-color .2s ease, background .2s ease;
+  }
+  .rule.evaluated{opacity:.75;}
+  .rule.fired{opacity:1;background:var(--panel);}
+  .rule-head{display:flex;align-items:center;gap:8px;margin-bottom:6px;}
+  .rule-dot{width:9px;height:9px;border-radius:50%;background:var(--text-faint);flex-shrink:0;}
+  .rule-name{font-family:'Space Grotesk',sans-serif;font-weight:500;font-size:13px;color:var(--text-dim);}
+  .rule.fired .rule-name{color:var(--text);}
+  .rule-status{
+    margin-left:auto;
+    font-family:'IBM Plex Mono',monospace;
+    font-size:10px;
+    text-transform:uppercase;
+    letter-spacing:.06em;
+    color:var(--text-faint);
+  }
+  .rule-expr{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:13px;
+    color:var(--text-faint);
+    line-height:1.6;
+  }
+  .rule-expr .v{
+    padding:1px 5px;
+    border-radius:4px;
+    background:var(--panel);
+    border:1px solid var(--border-soft);
+    color:var(--text-faint);
+    transition:all .15s ease;
+  }
+  .rule-expr .v.true{
+    color:var(--accent);
+    border-color:var(--accent);
+    background:var(--accent-dim);
+  }
+
+  .result{
+    margin-top:18px;
+    border-radius:10px;
+    padding:20px;
+    border:1px solid var(--border-soft);
+    background:var(--panel);
+    transition:border-color .2s ease;
+  }
+  .result-top{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;}
+  .result-level{font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:20px;}
+  .result-time{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:12px;
+    color:var(--text-dim);
+  }
+  .result-explain{margin-top:8px;font-size:13px;color:var(--text-dim);line-height:1.5;}
+  .result-active{margin-top:12px;font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--text-faint);}
+  .result-active span{color:var(--text);}
+
+  /* ---- Testes view ---- */
+  .score-card{
+    display:flex;align-items:center;gap:24px;
+    background:var(--panel);border:1px solid var(--border-soft);border-radius:10px;
+    padding:20px;margin-bottom:18px;
+  }
+  .score-num{font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:36px;color:var(--accent);}
+  .score-label{font-size:13px;color:var(--text-dim);}
+  .run-btn{
+    margin-left:auto;
+    font-family:'IBM Plex Mono',monospace;
+    font-size:12px;
+    background:var(--accent-dim);
+    color:var(--accent);
+    border:1px solid var(--accent);
+    border-radius:8px;
+    padding:9px 16px;
+    cursor:pointer;
+    transition:background .15s ease;
+  }
+  .run-btn:hover{background:rgba(72,217,196,0.22);}
+
+  .test-list{display:flex;flex-direction:column;gap:1px;}
+  .test-row{
+    display:flex;align-items:center;gap:12px;
+    padding:11px 14px;
+    background:var(--panel);
+    border:1px solid var(--border-soft);
+    border-radius:6px;
+    margin-bottom:6px;
+    font-size:13px;
+  }
+  .test-status{
+    width:20px;height:20px;border-radius:5px;
+    display:flex;align-items:center;justify-content:center;
+    font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:500;
+    flex-shrink:0;
+  }
+  .test-status.pass{background:rgba(111,202,130,0.15);color:var(--green);}
+  .test-status.fail{background:rgba(225,90,95,0.15);color:var(--red);}
+  .test-desc{flex:1;color:var(--text);}
+  .test-meta{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text-faint);}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <p class="eyebrow">sistema baseado em lógica proposicional</p>
+  <h1>Agente de triagem</h1>
+
+  <div class="tabs">
+    <button class="tab active" data-tab="triagem">Triagem</button>
+    <button class="tab" data-tab="testes">Testes</button>
+  </div>
+
+  <div class="view active" id="view-triagem">
+    <div class="grid">
+      <div class="panel">
+        <p class="panel-title">Proposições</p>
+        <div id="props"></div>
+      </div>
+
+      <div>
+        <div class="panel">
+          <p class="panel-title">Regras (avaliadas em ordem)</p>
+          <div class="rules" id="rules"></div>
+        </div>
+
+        <div class="result" id="result">
+          <div class="result-top">
+            <span class="result-level" id="result-level">—</span>
+            <span class="result-time" id="result-time"></span>
+          </div>
+          <p class="result-explain" id="result-explain"></p>
+          <p class="result-active" id="result-active"></p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="view" id="view-testes">
+    <div class="score-card">
+      <div>
+        <div class="score-num" id="score-num">—</div>
+        <div class="score-label">acertividade</div>
+      </div>
+      <button class="run-btn" id="run-btn">rodar testes ↻</button>
+    </div>
+    <div class="test-list" id="test-list"></div>
+  </div>
+
+</div>
+
+<script>
+const DESC = {
+  p:'Dor no peito', q:'Dificuldade respiratória', r:'Hemorragia',
+  s:'Consciência alterada', t:'Febre alta', u:'Muita dor',
+  w:'Dor leve a moderada', x:'Tosse ou congestão nasal', y:'Mal-estar geral / tontura leve'
+};
+
+const state = {p:false,q:false,r:false,s:false,t:false,u:false,w:false,x:false,y:false};
+
+function regraA(v){ return (v.p && v.q) || v.r || v.s; }
+function regraB(v){ return v.q || (v.p && v.u); }
+function regraC(v){ return v.u || v.t; }
+function regraD(v){ return Object.values(v).some(Boolean); }
+
+const RULES = [
+  {id:'a', name:'Emergência (a)', color:'var(--red)', time:'imediato', expr:'(p ∧ q) ∨ r ∨ s', vars:['p','q','r','s'], fn:regraA,
+   explain:'Dor no peito com dificuldade respiratória, hemorragia, ou consciência alterada.'},
+  {id:'b', name:'Muito urgente (b)', color:'var(--orange)', time:'até 10 min', expr:'q ∨ (p ∧ u)', vars:['q','p','u'], fn:regraB,
+   explain:'Dificuldade respiratória isolada, ou dor no peito associada a muita dor.'},
+  {id:'c', name:'Urgente (c)', color:'var(--yellow)', time:'até 60 min', expr:'u ∨ t', vars:['u','t'], fn:regraC,
+   explain:'Muita dor ou febre alta.'},
+  {id:'d', name:'Pouco urgente (d)', color:'var(--green)', time:'até 120 min', expr:'p∨q∨r∨s∨t∨u∨w∨x∨y', vars:['p','q','r','s','t','u','w','x','y'], fn:regraD,
+   explain:'Ao menos uma proposição verdadeira, sem critério de maior gravidade.'},
+];
+const NAO_URGENTE = {id:'e', name:'Não urgente (e)', color:'var(--blue)', time:'até 240 min',
+  explain:'Nenhuma proposição verdadeira.'};
+
+function classificar(v){
+  for(const rule of RULES){ if(rule.fn(v)) return rule; }
+  return NAO_URGENTE;
+}
+
+function renderProps(){
+  const el = document.getElementById('props');
+  el.innerHTML = '';
+  Object.keys(DESC).forEach(k=>{
+    const row = document.createElement('div');
+    row.className = 'prop' + (state[k] ? ' on' : '');
+    row.innerHTML = `
+      <span class="prop-letter">${k}</span>
+      <span class="prop-label">${DESC[k]}</span>
+      <span class="switch"></span>
+    `;
+    row.addEventListener('click', ()=>{ state[k]=!state[k]; render(); });
+    el.appendChild(row);
+  });
+}
+
+function renderRules(){
+  const el = document.getElementById('rules');
+  el.innerHTML = '';
+  const fired = classificar(state);
+  let priorMatched = false;
+
+  RULES.forEach(rule=>{
+    const isFired = rule.id === fired.id;
+    const wasSkipped = priorMatched && !isFired;
+    const div = document.createElement('div');
+    div.className = 'rule' + (isFired ? ' fired' : (priorMatched ? '' : ' evaluated'));
+
+    const expr = rule.expr.replace(/[a-z]/g, ch=>{
+      if(!rule.vars.includes(ch)) return ch;
+      const cls = state[ch] ? 'v true' : 'v';
+      return `<span class="${cls}">${ch}</span>`;
+    });
+
+    const status = isFired ? 'ativa' : (wasSkipped ? 'ignorada' : 'falsa');
+    div.innerHTML = `
+      <div class="rule-head">
+        <span class="rule-dot" style="background:${isFired ? rule.color : 'var(--text-faint)'}"></span>
+        <span class="rule-name">${rule.name}</span>
+        <span class="rule-status">${status}</span>
+      </div>
+      <div class="rule-expr">${expr}</div>
+    `;
+    el.appendChild(div);
+    if(rule.fn(state)) priorMatched = true;
+  });
+}
+
+function renderResult(){
+  const fired = classificar(state);
+  document.getElementById('result-level').textContent = fired.name;
+  document.getElementById('result-level').style.color = fired.color;
+  document.getElementById('result').style.borderColor = fired.color;
+  document.getElementById('result-time').textContent = 'tempo alvo: ' + fired.time;
+  document.getElementById('result-explain').textContent = fired.explain;
+  const ativas = Object.keys(state).filter(k=>state[k]);
+  document.getElementById('result-active').innerHTML = ativas.length
+    ? 'proposições ativas: <span>' + ativas.join(', ') + '</span>'
+    : 'proposições ativas: <span>nenhuma</span>';
+}
+
+function render(){ renderProps(); renderRules(); renderResult(); }
+
+document.querySelectorAll('.tab').forEach(tab=>{
+  tab.addEventListener('click', ()=>{
+    document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+    document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById('view-' + tab.dataset.tab).classList.add('active');
+  });
+});
+
+const CASOS = [
+  ['Nenhum sintoma', {p:false,q:false,r:false,s:false,t:false,u:false}, 'e'],
+  ['Somente dor no peito (p isolado)', {p:true,q:false,r:false,s:false,t:false,u:false}, 'd'],
+  ['Somente dificuldade respiratória (q)', {p:false,q:true,r:false,s:false,t:false,u:false}, 'b'],
+  ['Somente hemorragia (r)', {p:false,q:false,r:true,s:false,t:false,u:false}, 'a'],
+  ['Somente consciência alterada (s)', {p:false,q:false,r:false,s:true,t:false,u:false}, 'a'],
+  ['Somente febre alta (t)', {p:false,q:false,r:false,s:false,t:true,u:false}, 'c'],
+  ['Somente muita dor (u)', {p:false,q:false,r:false,s:false,t:false,u:true}, 'c'],
+  ['p ∧ q', {p:true,q:true,r:false,s:false,t:false,u:false}, 'a'],
+  ['p ∧ u (sem q)', {p:true,q:false,r:false,s:false,t:false,u:true}, 'b'],
+  ['p ∧ t (sem u)', {p:true,q:false,r:false,s:false,t:true,u:false}, 'c'],
+  ['q ∧ s', {p:false,q:true,r:false,s:true,t:false,u:false}, 'a'],
+  ['t ∧ u', {p:false,q:false,r:false,s:false,t:true,u:true}, 'c'],
+  ['p ∧ r', {p:true,q:false,r:true,s:false,t:false,u:false}, 'a'],
+  ['Todas verdadeiras', {p:true,q:true,r:true,s:true,t:true,u:true}, 'a'],
+  ['r ∧ u (prioridade a sobre c)', {p:false,q:false,r:true,s:false,t:false,u:true}, 'a'],
+  ['s ∧ t (prioridade a sobre c)', {p:false,q:false,r:false,s:true,t:true,u:false}, 'a'],
+  ['q ∧ t (prioridade b sobre c)', {p:false,q:true,r:false,s:false,t:true,u:false}, 'b'],
+  ['p isolado, sem t e sem u', {p:true,q:false,r:false,s:false,t:false,u:false}, 'd'],
+  ['Somente dor leve a moderada (w)', {p:false,q:false,r:false,s:false,t:false,u:false,w:true,x:false,y:false}, 'd'],
+  ['Somente tosse ou congestão nasal (x)', {p:false,q:false,r:false,s:false,t:false,u:false,w:false,x:true,y:false}, 'd'],
+  ['Somente mal-estar geral / tontura leve (y)', {p:false,q:false,r:false,s:false,t:false,u:false,w:false,x:false,y:true}, 'd'],
+  ['w ∧ x -- sintomas leves combinados', {p:false,q:false,r:false,s:false,t:false,u:false,w:true,x:true,y:false}, 'd'],
+  ['w ∧ x ∧ y -- todos os sintomas leves', {p:false,q:false,r:false,s:false,t:false,u:false,w:true,x:true,y:true}, 'd'],
+  ['w ∧ t -- dor leve + febre alta (prioridade de c sobre d)', {p:false,q:false,r:false,s:false,t:true,u:false,w:true,x:false,y:false}, 'c'],
+  ['x ∧ s -- tosse + consciência alterada (prioridade de a sobre d)', {p:false,q:false,r:false,s:true,t:false,u:false,w:false,x:true,y:false}, 'a'],
+];
+
+function rodarTestes(){
+  const listEl = document.getElementById('test-list');
+  listEl.innerHTML = '';
+  let acertos = 0;
+  CASOS.forEach(([desc, vals, esperado])=>{
+    const obtido = classificar(vals);
+    const ok = obtido.id === esperado;
+    if(ok) acertos++;
+    const row = document.createElement('div');
+    row.className = 'test-row';
+    row.innerHTML = `
+      <span class="test-status ${ok ? 'pass' : 'fail'}">${ok ? '✓' : '✕'}</span>
+      <span class="test-desc">${desc}</span>
+      <span class="test-meta">esperado: ${esperado} · obtido: ${obtido.id}</span>
+    `;
+    listEl.appendChild(row);
+  });
+  const pct = ((acertos / CASOS.length) * 100).toFixed(1);
+  document.getElementById('score-num').textContent = pct + '%';
+  document.getElementById('score-num').style.color = acertos === CASOS.length ? 'var(--accent)' : 'var(--orange)';
+}
+
+document.getElementById('run-btn').addEventListener('click', rodarTestes);
+
+render();
+rodarTestes();
+</script>
+</body>
+</html>
